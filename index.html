@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#030806">
+<meta name="description" content="Nur 2 Minuten: Finde heraus, in welche Claude-Gruppe du gehörst.">
+<meta property="og:title" content="Claude Level-Check">
+<meta property="og:description" content="Nur 2 Minuten. Finde heraus, in welche Gruppe du gehörst.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%9B%B9%3C/text%3E%3C/svg%3E">
+<style>body{margin:0}</style>
+<title>Claude Level-Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: Vollbild-Neonstadt (Canvas) im Rodney-Look, darüber eine schwebende Glaskarte pro Schritt. Bewusst nur dunkel. */
+:root {
+  color-scheme: dark;
+  --nacht: #030806;
+  --glas: rgba(6, 16, 12, 0.88);
+  --glas-rand: rgba(43, 212, 125, 0.28);
+  --neon: #2bd47d;
+  --neon-hell: #c9ffe2;
+  --neon-glow: rgba(43, 212, 125, 0.45);
+  --text: #f2f5f3;
+  --text-leise: #9aa59f;
+  --bernstein: #f0b94a;
+  --f-display: "Segoe UI", "Segoe UI Variable", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "JetBrains Mono", Consolas, "Cascadia Mono", ui-monospace, monospace;
+  --radius: 18px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--nacht);
+  color: var(--text);
+  font-family: var(--f-display);
+  font-size: 16px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+#bg { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; }
+.vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 35%, rgba(0,0,0,0.75) 100%); }
+
+.buehne {
+  position: relative; z-index: 2;
+  min-height: 100%;
+  display: grid; place-items: center;
+  padding-inline: 16px; padding-block: 32px;
+  perspective: 1400px;
+}
+.karte {
+  width: 100%; max-width: 720px;
+  background: var(--glas);
+  border: 1px solid var(--glas-rand);
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.4), 0 30px 80px rgba(0,0,0,.6), 0 0 60px rgba(43,212,125,.08);
+  padding: clamp(22px, 4vw, 40px);
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+.schritt { display: grid; gap: 22px; }
+.schritt.rein { animation: rein .6s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes rein {
+  from { opacity: 0; transform: translateZ(-160px) rotateX(10deg) translateY(30px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.karte.warp-raus { animation: warpRaus .5s cubic-bezier(.6,0,.9,.3) forwards; }
+@keyframes warpRaus { to { transform: translateZ(520px) scale(1.3); opacity: 0; } }
+.schritt.warp-rein { animation: warpRein .8s cubic-bezier(.16,1,.3,1) both; }
+@keyframes warpRein {
+  0%   { opacity: 0; transform: translateZ(-900px) scale(.4); }
+  55%  { opacity: 1; }
+  100% { opacity: 1; transform: none; }
+}
+.blitzlicht { position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle at 50% 46%, rgba(201,255,226,.55), rgba(43,212,125,.22) 28%, rgba(0,0,0,0) 62%); }
+.blitzlicht.an { animation: blitz .75s ease-out; }
+@keyframes blitz { 0% { opacity: 0; } 22% { opacity: 1; } 100% { opacity: 0; } }
+
+.kicker {
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--neon); display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.kicker .punkt { width: 8px; height: 8px; border-radius: 50%; background: var(--neon); box-shadow: 0 0 10px var(--neon); }
+h1, h2 { margin: 0; font-weight: 800; letter-spacing: -0.01em; text-wrap: balance; line-height: 1.08; }
+h1 { font-size: clamp(34px, 6.5vw, 58px); }
+h1 .gruen, h2 .gruen { color: var(--neon); text-shadow: 0 0 24px var(--neon-glow); }
+h2 { font-size: clamp(24px, 4.2vw, 34px); }
+p { margin: 0; color: var(--text-leise); max-width: 60ch; }
+p.gross { font-size: 18px; color: var(--text); }
+
+.knopfreihe { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.knopf {
+  appearance: none; border: 0; cursor: pointer;
+  font: 700 17px var(--f-display);
+  color: #04140b; background: var(--neon);
+  padding: 14px 26px; border-radius: 999px;
+  box-shadow: 0 10px 34px rgba(43,212,125,.42);
+  transition: transform .15s ease, box-shadow .2s ease, opacity .2s;
+}
+.knopf:hover { transform: translateY(-2px); box-shadow: 0 14px 44px rgba(43,212,125,.6); }
+.knopf:active { transform: translateY(0) scale(.98); }
+.knopf:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; transform: none; }
+.knopf.gross-knopf { font-size: clamp(18px, 2.6vw, 22px); padding: 18px 36px; text-decoration: none; display: inline-block; }
+.knopf.puls { animation: puls 1.8s ease-in-out infinite; }
+@keyframes puls {
+  0%, 100% { box-shadow: 0 10px 34px rgba(43,212,125,.42), 0 0 0 0 rgba(43,212,125,.5); }
+  50%      { box-shadow: 0 14px 48px rgba(43,212,125,.7), 0 0 0 14px rgba(43,212,125,0); }
+}
+.knopf.leise { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--glas-rand); }
+.knopf.leise:hover { box-shadow: inset 0 0 0 1px var(--neon); }
+.knopf:focus-visible, .option:focus-visible, .feld:focus-visible, .wahl:focus-visible { outline: 3px solid var(--neon-hell); outline-offset: 3px; }
+.tastenhinweis { font-family: var(--f-mono); font-size: 12px; color: var(--text-leise); }
+
+.fortschritt { display: flex; gap: 6px; }
+.fortschritt i { flex: 1; height: 4px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden; position: relative; }
+.fortschritt i.an::after { content: ""; position: absolute; inset: 0; background: var(--neon); box-shadow: 0 0 10px var(--neon); animation: fuellen .5s ease both; }
+@keyframes fuellen { from { transform: scaleX(0); transform-origin: left; } to { transform: scaleX(1); transform-origin: left; } }
+
+.feld {
+  width: 100%; font: 600 20px var(--f-display); color: var(--text);
+  background: rgba(0,0,0,.45); border: 1px solid var(--glas-rand); border-radius: 12px;
+  padding: 14px 16px; outline: none; caret-color: var(--neon);
+}
+.feld::placeholder { color: rgba(154,165,159,.6); }
+.feld:focus { border-color: var(--neon); box-shadow: 0 0 0 4px rgba(43,212,125,.15); }
+
+.optionen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.option {
+  appearance: none; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: start;
+  color: var(--text); background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.1); border-radius: 14px;
+  padding: 16px; min-width: 0;
+  font: inherit;
+  transform-style: preserve-3d;
+  transition: border-color .2s, background .2s, transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .2s;
+}
+.option:hover { border-color: var(--glas-rand); background: rgba(43,212,125,.06); transform: translateZ(18px); }
+.option[aria-checked="true"] { border-color: var(--neon); background: rgba(43,212,125,.12); box-shadow: 0 0 0 1px var(--neon), 0 0 30px rgba(43,212,125,.25); }
+.option .taste {
+  grid-row: span 2;
+  font-family: var(--f-mono); font-size: 13px; font-weight: 600;
+  width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+  border: 1px solid var(--glas-rand); color: var(--neon);
+}
+.option[aria-checked="true"] .taste { background: var(--neon); color: #04140b; }
+.option b { font-size: 16px; line-height: 1.3; min-width: 0; }
+.option small { color: var(--text-leise); font-size: 13px; line-height: 1.4; min-width: 0; }
+
+/* Auswertung */
+.decoder { font-family: var(--f-mono); font-weight: 600; font-size: clamp(30px, 7vw, 56px); letter-spacing: .12em; color: var(--neon); text-shadow: 0 0 22px var(--neon-glow); min-height: 1.3em; }
+.decoder .fix { color: var(--neon-hell); }
+
+/* Ergebnis */
+.ergebnis { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: clamp(20px, 4vw, 40px); align-items: center; }
+.deck-buehne { perspective: 900px; width: 132px; height: 400px; display: grid; place-items: center; }
+.deck { position: relative; width: 112px; height: 370px; transform-style: preserve-3d; animation: deckdreh 9s linear infinite; }
+.deck.landen { animation: decklanden 1.4s cubic-bezier(.2,.8,.2,1) both, deckdreh 9s linear 1.4s infinite; }
+@keyframes decklanden { from { transform: translateY(-120px) rotateX(70deg) rotateY(-540deg) scale(.6); opacity: 0; } to { transform: rotateY(0) ; opacity: 1; } }
+@keyframes deckdreh { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+.seite { position: absolute; inset: 0; border-radius: 56px; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
+.seite.vorn {
+  border: 3px solid var(--neon);
+  background:
+    repeating-linear-gradient(-38deg, rgba(43,212,125,.10) 0 8px, rgba(0,0,0,0) 8px 18px),
+    linear-gradient(180deg, #0c3f26, #062316);
+  box-shadow: 0 0 28px rgba(43,212,125,.55), inset 0 0 22px rgba(43,212,125,.25);
+  display: grid; justify-items: center; grid-template-rows: 70px 1fr 50px; align-items: center;
+}
+.seite.vorn svg { width: 34px; height: 34px; filter: drop-shadow(0 0 6px var(--neon)); }
+.deckname { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 900; font-size: 44px; letter-spacing: .04em; color: #fff; text-shadow: 0 0 10px rgba(43,212,125,.8); }
+.deck247 { font: 700 12px var(--f-display); color: #fff; letter-spacing: .05em; }
+.achse { position: absolute; left: -10px; right: -10px; height: 12px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.achse::before { content: ""; position: absolute; left: 14px; right: 14px; top: 5px; height: 3px; background: #dfe7e2; border-radius: 2px; }
+.achse i { width: 20px; height: 14px; border-radius: 6px; background: #e3ebe6; box-shadow: 0 0 6px rgba(255,255,255,.4); position: relative; }
+.achse.oben { top: 72px; } .achse.unten { bottom: 72px; }
+.seite.hinten { transform: rotateY(180deg); background: radial-gradient(circle at 30% 20%, #1c201f, #0b0d0c); border: 3px solid #1f2a25; display: grid; place-items: center; }
+.seite.hinten svg { width: 40px; height: 40px; opacity: .9; }
+
+.level { font-family: var(--f-mono); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--bernstein); }
+.gruppe-name { font-size: clamp(38px, 6.5vw, 60px); font-weight: 900; line-height: 1; letter-spacing: -0.02em; color: var(--text); text-shadow: 0 0 30px rgba(43,212,125,.35); overflow-wrap: anywhere; }
+.gruende { display: flex; flex-wrap: wrap; gap: 8px; }
+.gruende span { font-family: var(--f-mono); font-size: 12px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--glas-rand); color: var(--neon-hell); background: rgba(43,212,125,.06); }
+.wechsel { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.wechsel .label { color: var(--text-leise); font-size: 14px; margin-right: 4px; }
+.wahl { appearance: none; cursor: pointer; font: 600 14px var(--f-display); color: var(--text); background: transparent; border: 1px solid rgba(255,255,255,.15); border-radius: 999px; padding: 7px 14px; }
+.wahl[aria-pressed="true"] { border-color: var(--neon); color: var(--neon); }
+.abgabe { border-top: 1px solid rgba(255,255,255,.08); padding-top: 20px; display: grid; gap: 12px; }
+.zeile { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+.code {
+  flex: 1 1 260px; min-width: 0;
+  font-family: var(--f-mono); font-size: 15px; color: var(--neon-hell);
+  background: rgba(0,0,0,.5); border: 1px dashed var(--glas-rand); border-radius: 10px;
+  padding: 12px 14px; overflow-wrap: anywhere; user-select: all;
+}
+.status { font-family: var(--f-mono); font-size: 12px; color: var(--neon); min-height: 1.4em; }
+.sendestatus { font-size: 16px; color: var(--text-leise); min-height: 1.5em; }
+.sendestatus[data-art="ok"] { color: var(--neon); font-weight: 600; }
+.sendestatus[data-art="fehler"] { color: var(--bernstein); }
+
+@media (max-width: 640px) {
+  .optionen { grid-template-columns: 1fr; }
+  .ergebnis { grid-template-columns: 1fr; justify-items: start; }
+  .ergebnis { gap: 12px; }
+  .deck-buehne { width: 100%; height: 230px; }
+  .deck { width: 72px; height: 220px; }
+  .seite { border-radius: 36px; }
+  .seite.vorn { grid-template-rows: 46px 1fr 34px; }
+  .seite.vorn svg { width: 24px; height: 24px; }
+  .deckname { font-size: 27px; }
+  .achse { left: -7px; right: -7px; }
+  .achse i { width: 14px; height: 10px; }
+  .achse.oben { top: 44px; } .achse.unten { bottom: 44px; }
+  .knopf.gross-knopf { width: 100%; text-align: center; }
+}
+@media (hover: none), (max-width: 640px) { .nur-tastatur { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .schritt.rein, .schritt.warp-rein, .karte.warp-raus, .blitzlicht.an, .deck, .deck.landen, .fortschritt i.an::after { animation: none !important; }
+  .option:hover { transform: none; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+<div class="blitzlicht" id="blitzlicht" aria-hidden="true"></div>
+
+<main class="buehne">
+  <section class="karte" id="karte" aria-live="polite">
+    <!-- Startbild: ist ohne Skript schon lesbar -->
+    <div class="schritt" id="start">
+      <div class="kicker"><span class="punkt"></span>KI @ 24/7 · Level-Check</div>
+      <p class="gross hallo" id="hallo" hidden></p>
+      <h1>Welches <span class="gruen">Claude-Level</span> hast du?</h1>
+      <p class="gross">Nur 2 Minuten. Nimm dir die Zeit.</p>
+      <div class="knopfreihe">
+        <button class="knopf" id="los" type="button">Los geht's</button>
+      </div>
+      <p>Fünf kurze Fragen. Am Ende siehst du, in welche Gruppe du für den Pflichttermin am Freitag gehörst.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+"use strict";
+/* ---------- Einstellungen ---------- */
+// Ergebnisse gehen per POST an Rodney (Empfang: rodney-repo/dienst/src/levelcheck.ts). Leer = nur zum Kopieren anzeigen.
+const SENDE_URL = "https://0l8gbrk2-3978.euw.devtunnels.ms/level-check";
+
+const GRUPPEN = {
+  einsteiger: { name: "Einsteiger", level: "Level 1 · Push",
+    text: "Du nutzt Claude noch gar nicht oder ungefähr einmal pro Woche, meistens im Chat. Am Freitag holen wir dich genau da ab und machen Claude zu deinem täglichen Werkzeug." },
+  medium: { name: "Medium", level: "Level 2 · Ollie",
+    text: "Du arbeitest mehrmals pro Woche bis täglich mit Claude, schreibst Mails, prüfst Tabellen oder recherchierst. Die Daten kopierst du dafür noch rein und raus. Am Freitag geht es um den nächsten Schritt." },
+  super: { name: "Supercracks", level: "Level 3 · Kickflip",
+    text: "Du arbeitest vor allem mit Claude Code und hast Konnektoren zu euren Systemen aktiv. Claude holt sich die Daten selbst. Am Freitag tauschen wir uns auf diesem Level aus." }
+};
+
+const FRAGEN = [
+  { id: "oft", titel: "Wie oft hast du Claude in den letzten zwei Wochen genutzt?", optionen: [
+    { b: "Noch gar nicht", s: "Ich habe Claude bisher nicht oder kaum ausprobiert.", g: "noch gar nicht" },
+    { b: "Etwa einmal pro Woche", s: "Ab und zu, wenn mir etwas einfällt.", g: "etwa 1× pro Woche" },
+    { b: "Mehrmals pro Woche", s: "Claude gehört schon zu meiner Woche.", g: "mehrmals pro Woche" },
+    { b: "Täglich", s: "Ohne Claude fehlt mir was.", g: "täglich" } ] },
+  { id: "wo", titel: "Wo arbeitest du hauptsächlich mit Claude?", optionen: [
+    { b: "Noch nirgends", s: "Ich habe noch kein Konto oder es nicht eingerichtet.", g: "noch nicht eingerichtet" },
+    { b: "Im Chat", s: "claude.ai oder die App, früher Cowork.", g: "im Chat" },
+    { b: "Im Chat und in Erweiterungen", s: "Dazu Claude in Outlook, Excel oder Chrome.", g: "Chat + Erweiterungen" },
+    { b: "In Claude Code", s: "Im Terminal oder im Code-Tab der App.", g: "Claude Code" } ] },
+  { id: "daten", titel: "Wie kommen deine Daten zu Claude?", optionen: [
+    { b: "Gar nicht", s: "Ich stelle allgemeine Fragen ohne eigene Daten.", g: "ohne eigene Daten" },
+    { b: "Reinkopieren und rausziehen", s: "Text oder Tabellen per Copy & Paste.", g: "Copy & Paste" },
+    { b: "Dateien hochladen", s: "Excel, PDF oder Fotos lade ich hoch.", g: "Dateien hochladen" },
+    { b: "Claude holt sie selbst", s: "Über Konnektoren, z. B. Outlook, Teams, BC, Shopify.", g: "Konnektoren holen Daten" } ] },
+  { id: "konnektoren", titel: "Welche Konnektoren hast du aktiv?", optionen: [
+    { b: "Keine", s: "Ich weiß nicht, was das ist, oder nutze keine.", g: "keine Konnektoren" },
+    { b: "Weiß ich nicht genau", s: "Vielleicht ist da was eingerichtet.", g: "Konnektoren unklar" },
+    { b: "Ein oder zwei", s: "Zum Beispiel Microsoft 365.", g: "1–2 Konnektoren" },
+    { b: "Drei und mehr", s: "Mehrere Systeme sind mit Claude verbunden.", g: "3+ Konnektoren" } ] },
+  { id: "zuletzt", titel: "Was hast du zuletzt mit Claude gemacht?", optionen: [
+    { b: "Noch nichts", s: "Das kommt noch.", g: "noch nichts gemacht" },
+    { b: "Eine Frage gestellt", s: "Etwas recherchiert oder erklären lassen.", g: "Fragen & Recherche" },
+    { b: "Mail oder Excel", s: "Eine Mail formuliert oder eine Tabelle geprüft.", g: "Mails & Excel" },
+    { b: "Ablauf automatisiert", s: "Ein Tool gebaut oder einen Prozess automatisiert.", g: "Abläufe automatisiert" } ] }
+];
+
+/* ---------- Auswertung ---------- */
+function bestimmeGruppe(a) {
+  const supi = (a.wo === 3) + (a.daten === 3) + (a.konnektoren >= 2) + (a.zuletzt === 3);
+  if (a.oft >= 2 && supi >= 2) return "super";
+  if (a.oft <= 1) return "einsteiger";
+  return "medium";
+}
+
+/* ---------- Zustand ---------- */
+const zustand = { schritt: "start", frage: 0, name: "", email: "", vorbelegt: false, antworten: {}, gruppe: null, gewaehlt: null };
+const MAIL_OK = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
+
+function ausLink() {
+  try {
+    const h = decodeURIComponent((location.hash || "").slice(1));
+    if (!h.startsWith("p-")) return null;
+    let b = h.slice(2).replace(/-/g, "+").replace(/_/g, "/");
+    while (b.length % 4) b += "=";
+    const bytes = Uint8Array.from(atob(b), (ch) => ch.charCodeAt(0));
+    const [n, e] = new TextDecoder().decode(bytes).split("|");
+    if (n && n.trim().length >= 2 && MAIL_OK.test(e || "")) return { n: n.trim(), e: e.trim() };
+  } catch (_) { /* kaputter Link: einfach leer starten */ }
+  return null;
+}
+(() => {
+  const p = ausLink();
+  if (!p) return;
+  zustand.name = p.n; zustand.email = p.e; zustand.vorbelegt = true;
+  const hallo = document.getElementById("hallo");
+  hallo.textContent = `Hi ${p.n.split(" ")[0]}!`;
+  hallo.hidden = false;
+})();
+const karte = document.getElementById("karte");
+const ruhig = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function el(tag, attrs = {}, ...kinder) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v;
+    else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const k of kinder) if (k != null) e.append(k);
+  return e;
+}
+
+function zeige(knoten, fokus, warp) {
+  knoten.classList.add("schritt", warp ? "warp-rein" : "rein");
+  karte.replaceChildren(knoten);
+  if (fokus) requestAnimationFrame(() => fokus.focus({ preventScroll: true }));
+  if (!warp) szene.schub();
+}
+
+/* „Los geht's“: Warp-Sprung in die erste Frage */
+let imWarp = false;
+function losMitWarp() {
+  if (imWarp) return;
+  if (ruhig) { schrittName(); return; }
+  imWarp = true;
+  szene.warp();
+  const blitz = document.getElementById("blitzlicht");
+  blitz.classList.remove("an"); void blitz.offsetWidth; blitz.classList.add("an");
+  karte.classList.add("warp-raus");
+  setTimeout(() => { schrittName(true); karte.classList.remove("warp-raus"); imWarp = false; }, 500);
+}
+
+function fortschritt(aktiv) {
+  const leiste = el("div", { class: "fortschritt", "aria-hidden": "true" });
+  for (let i = 0; i < FRAGEN.length + 1; i++) leiste.append(el("i", { class: i <= aktiv ? "an" : "" }));
+  return leiste;
+}
+
+/* ---------- Schritte ---------- */
+function schrittName(warp) {
+  zustand.schritt = "name";
+  const feld = el("input", { class: "feld", id: "name", type: "text", autocomplete: "name", placeholder: "Vor- und Nachname", maxlength: "60" });
+  const mail = el("input", { class: "feld", id: "email", type: "email", autocomplete: "email", inputmode: "email", placeholder: "name@firma.de", maxlength: "80" });
+  feld.value = zustand.name; mail.value = zustand.email;
+  const weiter = el("button", { class: "knopf", type: "button", text: "Weiter" });
+  const pruefe = () => { weiter.disabled = feld.value.trim().length < 2 || !MAIL_OK.test(mail.value.trim()); };
+  feld.addEventListener("input", pruefe); mail.addEventListener("input", pruefe); pruefe();
+  const los = () => { if (weiter.disabled) return; zustand.name = feld.value.trim(); zustand.email = mail.value.trim(); schrittFrage(0); };
+  weiter.addEventListener("click", los);
+  feld.addEventListener("keydown", (e) => { if (e.key === "Enter") mail.focus(); });
+  mail.addEventListener("keydown", (e) => { if (e.key === "Enter") los(); });
+  zeige(el("div", {},
+    fortschritt(0),
+    el("div", { class: "kicker", text: "Kurz vorweg" }),
+    el("h2", { text: zustand.vorbelegt ? "Bist das du?" : "Wer bist du?" }),
+    el("p", { text: zustand.vorbelegt
+      ? "Name und E-Mail haben wir schon eingetragen. Passt alles, geht's direkt weiter."
+      : "Damit Julius dich am Ende der richtigen Gruppe zuordnen kann." }),
+    el("label", { for: "name", class: "tastenhinweis", text: "Dein Name" }), feld,
+    el("label", { for: "email", class: "tastenhinweis", text: "Deine E-Mail-Adresse" }), mail,
+    el("div", { class: "knopfreihe" }, weiter, el("button", { class: "knopf leise", type: "button", text: "Zurück", onclick: startBild }))
+  ), zustand.vorbelegt ? weiter : feld, warp === true);
+}
+
+function schrittFrage(i) {
+  zustand.schritt = "frage"; zustand.frage = i;
+  const f = FRAGEN[i];
+  const gruppe = el("div", { class: "optionen", role: "radiogroup", "aria-label": f.titel });
+  const weiter = el("button", { class: "knopf", type: "button", text: i === FRAGEN.length - 1 ? "Auswerten" : "Weiter" });
+  const aktualisiere = () => {
+    [...gruppe.children].forEach((o, n) => { o.setAttribute("aria-checked", String(zustand.antworten[f.id] === n)); o.tabIndex = (zustand.antworten[f.id] ?? 0) === n ? 0 : -1; });
+    weiter.disabled = zustand.antworten[f.id] == null;
+  };
+  const waehle = (n, automatisch) => {
+    zustand.antworten[f.id] = n; aktualisiere(); szene.puls();
+    if (automatisch) setTimeout(() => weiterGehen(), ruhig ? 0 : 280);
+  };
+  f.optionen.forEach((o, n) => {
+    const b = el("button", { class: "option", type: "button", role: "radio", "aria-checked": "false" },
+      el("span", { class: "taste", text: String(n + 1) }), el("b", { text: o.b }), el("small", { text: o.s }));
+    b.addEventListener("click", () => waehle(n, true));
+    b.addEventListener("pointermove", kippen);
+    b.addEventListener("pointerleave", () => { b.style.transform = ""; });
+    gruppe.append(b);
+  });
+  gruppe.addEventListener("keydown", (e) => {
+    const n = zustand.antworten[f.id] ?? -1;
+    if (["ArrowDown", "ArrowRight"].includes(e.key)) { e.preventDefault(); waehle((n + 1) % 4); gruppe.children[zustand.antworten[f.id]].focus(); }
+    if (["ArrowUp", "ArrowLeft"].includes(e.key)) { e.preventDefault(); waehle((n + 3) % 4); gruppe.children[zustand.antworten[f.id]].focus(); }
+  });
+  const weiterGehen = () => { if (zustand.antworten[f.id] == null) return; if (i < FRAGEN.length - 1) schrittFrage(i + 1); else schrittAuswertung(); };
+  weiter.addEventListener("click", weiterGehen);
+  aktualisiere();
+  zeige(el("div", {},
+    fortschritt(i + 1),
+    el("div", { class: "kicker", text: `Frage ${i + 1} von ${FRAGEN.length}` }),
+    el("h2", { text: f.titel }),
+    gruppe,
+    el("div", { class: "knopfreihe" }, weiter,
+      el("button", { class: "knopf leise", type: "button", text: "Zurück", onclick: () => i === 0 ? schrittName() : schrittFrage(i - 1) }),
+      el("span", { class: "tastenhinweis nur-tastatur", text: "Tasten 1–4 wählen" }))
+  ), gruppe.children[zustand.antworten[f.id] ?? 0]);
+}
+
+function kippen(e) {
+  if (ruhig) return;
+  const r = e.currentTarget.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+  e.currentTarget.style.transform = `translateZ(18px) rotateY(${x * 10}deg) rotateX(${-y * 10}deg)`;
+}
+
+function schrittAuswertung() {
+  zustand.schritt = "auswertung";
+  zustand.gruppe = bestimmeGruppe(zustand.antworten);
+  zustand.gewaehlt = zustand.gruppe;
+  const ziel = GRUPPEN[zustand.gruppe].name.toUpperCase();
+  const anzeige = el("div", { class: "decoder", "aria-hidden": "true" });
+  zeige(el("div", {},
+    el("div", { class: "kicker", text: "Auswertung läuft" }),
+    el("h2", { text: "Rodney rechnet dein Level aus …" }),
+    anzeige
+  ));
+  szene.regen(1);
+  if (ruhig) { schrittErgebnis(); return; }
+  const zeichen = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄ0123456789<>*+=";
+  const start = performance.now(), dauer = 1900;
+  const tick = (jetzt) => {
+    const t = (jetzt - start) / dauer;
+    const fest = Math.floor(Math.max(0, t - 0.25) / 0.75 * ziel.length);
+    anzeige.replaceChildren(...[...ziel].map((c, n) => n < fest
+      ? el("span", { class: "fix", text: c })
+      : el("span", { text: zeichen[Math.floor(Math.random() * zeichen.length)] })));
+    if (t < 1) requestAnimationFrame(tick); else setTimeout(schrittErgebnis, 350);
+  };
+  requestAnimationFrame(tick);
+}
+
+function ergebnisZeile() {
+  return `${zustand.name} · ${zustand.email} · ${GRUPPEN[zustand.gewaehlt].name}` + (zustand.gewaehlt !== zustand.gruppe ? ` (Vorschlag: ${GRUPPEN[zustand.gruppe].name})` : "");
+}
+
+function antwortText() {
+  return FRAGEN.map((f) => f.optionen[zustand.antworten[f.id]].g).join(" · ");
+}
+/* Ergebnis an Rodney schicken: im Hintergrund, mit Wiederholung. */
+let sendetGerade = false;
+async function senden() {
+  if (!SENDE_URL || zustand.uebermittelt || sendetGerade) return;
+  sendetGerade = true; zeigeStatus();
+  const daten = { name: zustand.name, email: zustand.email, gruppe: GRUPPEN[zustand.gewaehlt].name, vorschlag: GRUPPEN[zustand.gruppe].name, antworten: antwortText() };
+  let ok = false;
+  for (let versuch = 0; versuch < 4 && !ok; versuch++) {
+    try {
+      const antwort = await fetch(SENDE_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=UTF-8" }, body: JSON.stringify(daten), keepalive: true });
+      if (antwort.ok) ok = true;
+      else if (antwort.status >= 400 && antwort.status < 500 && antwort.status !== 429) break;
+    } catch (_) { /* Netz weg: gleich nochmal */ }
+    if (!ok && versuch < 3) await new Promise((weiter) => setTimeout(weiter, 1500 * (versuch + 1)));
+  }
+  sendetGerade = false;
+  zustand.uebermittelt = ok; zustand.sendenFehlgeschlagen = !ok;
+  merke(); zeigeStatus();
+}
+function zeigeStatus() {
+  const st = document.getElementById("sendestatus"), notfall = document.getElementById("notfall");
+  if (!st) return;
+  if (zustand.uebermittelt) { st.textContent = "✓ Dein Ergebnis ist bei Julius angekommen."; st.dataset.art = "ok"; }
+  else if (zustand.sendenFehlgeschlagen && !sendetGerade) { st.textContent = "Die Übermittlung hat nicht geklappt. Schick Julius bitte diese Zeile per Teams oder Mail:"; st.dataset.art = "fehler"; }
+  else { st.textContent = "Wird an Julius übermittelt …"; st.dataset.art = "laeuft"; }
+  if (notfall) notfall.hidden = !(zustand.sendenFehlgeschlagen && !zustand.uebermittelt && !sendetGerade);
+}
+
+/* Erst abschicken, dann wird das Level enthüllt. */
+function schrittAbschicken() {
+  zustand.schritt = "abschicken";
+  szene.regen(0);
+  const knopf = el("button", { class: "knopf gross-knopf puls", type: "button", text: "Abschicken & Level ansehen" });
+  knopf.addEventListener("click", () => {
+    zustand.abgeschickt = true; merke();
+    if (!ruhig) { const b = document.getElementById("blitzlicht"); b.classList.remove("an"); void b.offsetWidth; b.classList.add("an"); }
+    schrittErgebnis();
+    senden();
+  });
+  zeige(el("div", {},
+    el("div", { class: "kicker" }, el("span", { class: "punkt" }), "Auswertung fertig"),
+    el("h1", {}, "Dein Level ", el("span", { class: "gruen", text: "steht fest." })),
+    el("p", { class: "gross", text: "Ein Klick: Dein Ergebnis geht an Julius, und du siehst sofort, in welche Gruppe du gehörst." }),
+    el("div", { class: "knopfreihe" }, knopf)
+  ), knopf);
+  merke();
+}
+
+function schrittErgebnis() {
+  if (SENDE_URL && !zustand.abgeschickt) { schrittAbschicken(); return; }
+  zustand.schritt = "ergebnis";
+  szene.regen(0);
+  const g = GRUPPEN[zustand.gewaehlt];
+  const gruende = el("div", { class: "gruende", "aria-label": "Deine Antworten" },
+    ...FRAGEN.map((f) => el("span", { text: f.optionen[zustand.antworten[f.id]].g })));
+  const code = el("div", { class: "code", id: "code", text: ergebnisZeile() });
+  const status = el("div", { class: "status", role: "status" });
+  const kopieren = el("button", { class: "knopf leise", type: "button", text: "Kopieren" });
+  kopieren.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(ergebnisZeile()); status.textContent = "Kopiert."; }
+    catch { const r = document.createRange(); r.selectNodeContents(code); const s = getSelection(); s.removeAllRanges(); s.addRange(r); status.textContent = "Markiert – jetzt mit Strg+C kopieren."; }
+  });
+  const abgabe = el("div", { class: "abgabe" });
+  if (SENDE_URL) {
+    const notfall = el("div", { class: "zeile", id: "notfall" }, code, kopieren);
+    notfall.hidden = true;
+    abgabe.append(el("div", { class: "sendestatus", id: "sendestatus", role: "status" }), notfall, status);
+  } else {
+    abgabe.append(el("div", { class: "kicker", text: "Letzter Schritt" }),
+      el("p", { class: "gross", text: "Schick diese Zeile kurz an Julius, per Teams oder Mail." }),
+      el("div", { class: "zeile" }, code, kopieren), status);
+  }
+  abgabe.append(el("p", { text: "Die Einladung für den Termin deiner Gruppe am Freitag kommt separat." }));
+
+  const deck = el("div", { class: "deck" + (ruhig ? "" : " landen") });
+  deck.innerHTML = `
+    <div class="seite vorn">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><polygon fill="#2bd47d" points="50,4 61,38 97,38 68,59 79,94 50,72 21,94 32,59 3,38 39,38"/></svg>
+      <div class="deckname">RODNEY</div>
+      <div class="deck247">24/7</div>
+      <div class="achse oben"><i></i><i></i></div>
+      <div class="achse unten"><i></i><i></i></div>
+    </div>
+    <div class="seite hinten"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon fill="#2bd47d" points="50,4 61,38 97,38 68,59 79,94 50,72 21,94 32,59 3,38 39,38"/></svg></div>`;
+
+  zeige(el("div", {},
+    el("div", { class: "ergebnis" },
+      el("div", { class: "deck-buehne", "aria-hidden": "true" }, deck),
+      el("div", { class: "schritt", style: "gap:16px" },
+        el("div", { class: "kicker" }, el("span", { class: "punkt" }), `${zustand.name}, dein Level`),
+        el("div", { class: "level", text: g.level }),
+        el("div", { class: "gruppe-name", text: g.name }),
+        el("p", { class: "gross", text: g.text }),
+        gruende)),
+    abgabe
+  ));
+  szene.jubel();
+  merke();
+  zeigeStatus();
+}
+
+/* Ergebnis im Browser merken: wer den Link später wieder öffnet, landet direkt beim Ergebnis. */
+const MERKER = "claude-level-check-v1";
+function merke() {
+  try { localStorage.setItem(MERKER, JSON.stringify({ name: zustand.name, email: zustand.email, antworten: zustand.antworten, gruppe: zustand.gruppe, gewaehlt: zustand.gewaehlt, abgeschickt: !!zustand.abgeschickt, uebermittelt: !!zustand.uebermittelt })); } catch (_) { /* ohne Speicher geht es auch */ }
+}
+function gemerkt() {
+  try {
+    const s = JSON.parse(localStorage.getItem(MERKER) || "null");
+    if (s && GRUPPEN[s.gruppe] && GRUPPEN[s.gewaehlt] && (!zustand.vorbelegt || s.email === zustand.email)) return s;
+  } catch (_) { /* nichts gemerkt */ }
+  return null;
+}
+
+function startBild() {
+  zustand.schritt = "start";
+  const b = el("div", {});
+  b.innerHTML = document.getElementById("start-vorlage").innerHTML;
+  zeige(b, b.querySelector("#los"));
+  b.querySelector("#los").addEventListener("click", losMitWarp);
+}
+
+/* Startbild als Vorlage sichern und verdrahten */
+(() => {
+  const s = document.getElementById("start");
+  const vorlage = document.createElement("template"); vorlage.id = "start-vorlage"; vorlage.innerHTML = s.innerHTML;
+  document.body.append(vorlage);
+  document.getElementById("los").addEventListener("click", losMitWarp);
+})();
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.matches("input, textarea")) return;
+  if (zustand.schritt === "start" && e.key === "Enter") { e.preventDefault(); losMitWarp(); }
+  if (zustand.schritt === "frage" && /^[1-4]$/.test(e.key)) {
+    const b = karte.querySelectorAll(".option")[Number(e.key) - 1]; if (b) b.click();
+  }
+});
+
+/* ---------- Neonstadt im Hintergrund ---------- */
+// Leistung: Linien werden pro Helligkeitsstufe gesammelt und mit einem einzigen stroke() gezeichnet,
+// der Lichthof ist vorberechnet, die Pixeldichte ist auf 1,5 begrenzt.
+const szene = (() => {
+  const c = document.getElementById("bg"), x = c.getContext("2d", { alpha: false });
+  let W = 0, H = 0, dpr = 1, weg = 0, tempo = 1.6, zielTempo = 1.6, regen = 1, zielRegen = 1, blitz = 0, mx = 0, my = 0, zmx = 0, zmy = 0, warp = 0;
+  let glut = null, f = 1;
+  const rnd = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+  const STREIFEN = Array.from({ length: 160 }, () => ({ w: rnd() * Math.PI * 2, d: rnd(), v: 0.6 + rnd() * 1.4 }));
+  const HAEUSER = Array.from({ length: 26 }, (_, i) => {
+    const seite = i % 2 ? 1 : -1;
+    return { seite, x: seite * (5 + rnd() * 7), b: 2.5 + rnd() * 3.5, t: 3 + rnd() * 4, h: 4 + rnd() * 14, z: (i / 26) * 110 + rnd() * 3,
+      fenster: Array.from({ length: 3 }, () => [0.15 + rnd() * 0.7, 0.2 + rnd() * 0.7]) };
+  });
+  const STERNE = Array.from({ length: 90 }, () => [rnd(), rnd() * 0.45, rnd() * 6]);
+  const SP = 22, ZH = 20, ZEICHEN = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉ0123456789Z:=*+<>";
+  const KANTEN = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  const STUFEN = 8;
+  let spalten = [];
+
+  function groesse() {
+    dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    W = innerWidth; H = innerHeight;
+    c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    f = Math.min(W, H * 1.6) * 0.62;
+    glut = x.createRadialGradient(W / 2, H * 0.44, 0, W / 2, H * 0.44, Math.max(W, H) * 0.7);
+    glut.addColorStop(0, "rgba(43,212,125,1)"); glut.addColorStop(1, "rgba(43,212,125,0)");
+    spalten = Array.from({ length: Math.ceil(W / SP) + 1 }, () => ({ y: -rnd() * H * 1.5, v: 240 + rnd() * 380, len: 7 + Math.floor(rnd() * 12) }));
+  }
+  // Projektion in Bildschirmkoordinaten; schreibt in ein Ziel-Array, um Speicher zu sparen
+  const P = [0, 0];
+  function proj(px, py, pz, ziel = P) {
+    if (pz < 0.25) return false;
+    ziel[0] = W / 2 + (px - zmx * 1.2) * f / pz;
+    ziel[1] = H * 0.44 + zmy * 18 + (1.7 - py) * f / pz;
+    return true;
+  }
+  const A = [0, 0], B = [0, 0];
+  function strecke(pfad, x1, y1, z1, x2, y2, z2) {
+    if (!proj(x1, y1, z1, A) || !proj(x2, y2, z2, B)) return;
+    pfad.moveTo(A[0], A[1]); pfad.lineTo(B[0], B[1]);
+  }
+
+  function bild(dt) {
+    tempo += (zielTempo - tempo) * Math.min(1, dt * 2.5);
+    regen += (zielRegen - regen) * Math.min(1, dt * 1.6);
+    zmx += (mx - zmx) * Math.min(1, dt * 2); zmy += (my - zmy) * Math.min(1, dt * 2);
+    blitz = Math.max(0, blitz - dt * 1.4);
+    warp = Math.max(0, warp - dt * 1.1);
+    weg += dt * tempo;
+
+    x.globalAlpha = 1;
+    x.fillStyle = "#030806"; x.fillRect(0, 0, W, H);
+    // Lichthof am Horizont (vorberechnet, nur die Deckkraft ändert sich)
+    x.save(); x.translate(0, zmy * 18); x.globalAlpha = Math.min(1, 0.16 + blitz * 0.25 + warp * 0.12);
+    x.fillStyle = glut; x.fillRect(0, -40, W, H + 80); x.restore();
+
+    // Sterne
+    x.fillStyle = "#c9ffe2";
+    for (const [sx, sy, ph] of STERNE) { x.globalAlpha = 0.25 + 0.25 * Math.sin(ph + weg * 0.7); x.fillRect(sx * W, sy * H, 1.4, 1.4); }
+    x.globalAlpha = 1;
+
+    x.strokeStyle = "#2bd47d"; x.lineWidth = 1;
+    // Boden: Längslinien in einem Pfad
+    x.beginPath();
+    for (let gx = -30; gx <= 30; gx += 2) strecke(x, gx, 0, 0.6, gx, 0, 70);
+    x.globalAlpha = 0.22; x.stroke();
+    // Querlinien nach Helligkeit gebündelt
+    const off = weg % 2;
+    for (let s = 0; s < STUFEN; s++) {
+      x.beginPath();
+      let leer = true;
+      for (let k = 0; k < 36; k++) {
+        const z = 0.6 + k * 2 - off; if (z < 0.6) continue;
+        const stufe = Math.min(STUFEN - 1, Math.floor((z / 70) * STUFEN));
+        if (stufe !== s) continue;
+        strecke(x, -30, 0, z, 30, 0, z); leer = false;
+      }
+      if (leer) continue;
+      x.globalAlpha = 0.55 * (1 - (s + 0.5) / STUFEN);
+      x.lineWidth = s === 0 ? 1.5 : 1;
+      x.stroke();
+    }
+    x.lineWidth = 1;
+
+    // Häuser: je Haus ein Pfad für die Kanten, einer für die Fenster
+    const tiefe = 112;
+    const reihe = HAEUSER.map((h) => ({ h, z: ((h.z - weg) % tiefe + tiefe) % tiefe + 1.5 })).sort((a, b) => b.z - a.z);
+    for (const { h, z } of reihe) {
+      const a = Math.max(0, Math.min(0.6, (1 - z / tiefe) * 0.75));
+      if (a < 0.02) continue;
+      const x0 = h.x, x1 = h.x + h.seite * h.b, z0 = z, z1 = z + h.t;
+      const ecken = [[x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1], [x0, h.h, z0], [x1, h.h, z0], [x1, h.h, z1], [x0, h.h, z1]];
+      x.beginPath();
+      for (const [i, j] of KANTEN) strecke(x, ...ecken[i], ...ecken[j]);
+      x.globalAlpha = a; x.stroke();
+      x.beginPath();
+      for (const [u, v] of h.fenster) {
+        const zz = z0 + u * h.t, yy = v * h.h;
+        if (!proj(x0, yy, zz, A)) continue;
+        x.moveTo(A[0], A[1]);
+        if (proj(x0, yy + 0.7, zz, B)) x.lineTo(B[0], B[1]);
+        if (proj(x0, yy + 0.7, zz + 0.5, B)) x.lineTo(B[0], B[1]);
+        if (proj(x0, yy, zz + 0.5, B)) x.lineTo(B[0], B[1]);
+        x.closePath();
+      }
+      x.fillStyle = "#f0b94a"; x.globalAlpha = a * 0.35; x.fill();
+    }
+    x.globalAlpha = 1;
+
+    // Warp-Streifen: vier Stärken, je ein Pfad
+    if (warp > 0.01) {
+      const cx = W / 2, cy = H * 0.44 + zmy * 18, maxR = Math.hypot(W, H) * 0.62;
+      x.lineCap = "round";
+      for (let s = 0; s < 4; s++) {
+        x.beginPath();
+        for (const st of STREIFEN) {
+          if (s === 0) { st.d += dt * st.v * (0.6 + warp * 2.6); if (st.d > 1) { st.d = 0.02 + rnd() * 0.1; st.w = rnd() * Math.PI * 2; } }
+          if (Math.min(3, Math.floor(st.d * 4)) !== s) continue;
+          const r1 = st.d * st.d * maxR, r2 = Math.min(maxR, r1 + (40 + 320 * st.d) * warp);
+          const ca = Math.cos(st.w), sa = Math.sin(st.w);
+          x.moveTo(cx + ca * r1, cy + sa * r1); x.lineTo(cx + ca * r2, cy + sa * r2);
+        }
+        x.strokeStyle = s === 3 ? "#e8fff2" : "#2bd47d";
+        x.lineWidth = 0.8 + s * 0.8;
+        x.globalAlpha = Math.min(1, warp) * (0.3 + s * 0.22);
+        x.stroke();
+      }
+      x.lineCap = "butt"; x.globalAlpha = 1;
+    }
+
+    // Matrix-Regen (nur am Anfang und bei der Auswertung)
+    if (regen > 0.02) {
+      x.font = "500 16px 'JetBrains Mono', Consolas, monospace"; x.textAlign = "center"; x.textBaseline = "middle";
+      x.fillStyle = "#2bd47d";
+      for (let i = 0; i < spalten.length; i++) {
+        const s = spalten[i];
+        s.y += s.v * dt; if (s.y - s.len * ZH > H) { s.y = -rnd() * 200; s.v = 240 + rnd() * 380; }
+        for (let r = 1; r < s.len; r++) {
+          const yy = s.y - r * ZH; if (yy < -ZH || yy > H + ZH) continue;
+          x.globalAlpha = (1 - r / s.len) * 0.55 * regen;
+          x.fillText(ZEICHEN[(i * 7 + r * 13 + ((yy / ZH) | 0)) % ZEICHEN.length], i * SP + SP / 2, yy);
+        }
+      }
+      x.fillStyle = "#e8fff2";
+      for (let i = 0; i < spalten.length; i++) {
+        const s = spalten[i]; if (s.y < -ZH || s.y > H + ZH) continue;
+        x.globalAlpha = Math.min(1, 0.9 * regen);
+        x.fillText(ZEICHEN[(i * 7 + ((s.y / ZH) | 0)) % ZEICHEN.length], i * SP + SP / 2, s.y);
+      }
+      x.globalAlpha = 1;
+    }
+  }
+
+  let letzte = performance.now(), laeuft = true;
+  function schleife(jetzt) {
+    const dt = Math.min(0.05, (jetzt - letzte) / 1000); letzte = jetzt;
+    bild(dt);
+    if (laeuft && !ruhig) requestAnimationFrame(schleife);
+  }
+  groesse();
+  let rTimer = 0;
+  addEventListener("resize", () => { clearTimeout(rTimer); rTimer = setTimeout(() => { groesse(); if (ruhig) bild(0); }, 120); });
+  addEventListener("pointermove", (e) => { if (e.pointerType === "mouse") { mx = e.clientX / W * 2 - 1; my = e.clientY / H * 2 - 1; } });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) laeuft = false; else if (!laeuft && !ruhig) { laeuft = true; letzte = performance.now(); requestAnimationFrame(schleife); }
+  });
+  if (ruhig) { regen = 0; zielRegen = 0; bild(0); } else requestAnimationFrame(schleife);
+  setTimeout(() => { zielRegen = 0; }, 2400);
+  setTimeout(() => { const s = gemerkt(); if (s) { Object.assign(zustand, s); schrittErgebnis(); if (s.abgeschickt && !s.uebermittelt) senden(); } }, 0);
+
+  return {
+    schub() { if (ruhig) return; tempo = Math.max(tempo, 9); zielTempo = 1.6; },
+    puls() { blitz = Math.min(1, blitz + 0.4); },
+    regen(an) { if (ruhig) return; zielRegen = an; zielTempo = an ? 5 : 1.6; },
+    jubel() { if (ruhig) return; blitz = 1; tempo = 14; zielTempo = 1.2; },
+    warp() { if (ruhig) return; warp = 1.15; blitz = 1; tempo = 34; zielTempo = 1.6; zielRegen = 0; }
+  };
+})();
+</script>
+</body>
+</html>
