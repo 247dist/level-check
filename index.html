@@ -202,6 +202,9 @@ p.gross { font-size: 18px; color: var(--text); }
 }
 .status { font-family: var(--f-mono); font-size: 12px; color: var(--neon); min-height: 1.4em; }
 .abgabe .status:empty { display: none; }
+.termin { display: grid; gap: 6px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--glas-rand); background: rgba(43,212,125,.07); }
+.termin-zeit { font-size: clamp(20px, 4.5vw, 26px); font-weight: 800; color: var(--neon-hell); }
+.termin p { color: var(--text-leise); font-size: 14px; margin: 0; }
 .sendestatus { font-size: 16px; color: var(--text-leise); min-height: 1.5em; }
 .sendestatus[data-art="ok"] { color: var(--neon); font-weight: 600; }
 .sendestatus[data-art="fehler"] { color: var(--bernstein); }
@@ -256,12 +259,14 @@ p.gross { font-size: 18px; color: var(--text); }
 // Ergebnisse gehen per POST an Rodney (Empfang: rodney-repo/dienst/src/levelcheck.ts). Leer = nur zum Kopieren anzeigen.
 const SENDE_URL = "https://0l8gbrk2-3978.euw.devtunnels.ms/level-check";
 
+// Pflichttermin pro Gruppe (Teams-Besprechungen in Julius' Kalender, siehe level-check-termine.json)
+const TERMIN_TAG = "Freitag, 16.10.";
 const GRUPPEN = {
-  einsteiger: { name: "Einsteiger", level: "Level 1 · Push",
+  einsteiger: { name: "Einsteiger", level: "Level 1 · Push", zeit: "10:00–10:25",
     text: "Du nutzt Claude noch gar nicht oder ungefähr einmal pro Woche, meistens im Chat. Am Freitag holen wir dich genau da ab und machen Claude zu deinem täglichen Werkzeug." },
-  medium: { name: "Medium", level: "Level 2 · Ollie",
+  medium: { name: "Medium", level: "Level 2 · Ollie", zeit: "10:35–11:00",
     text: "Du arbeitest mehrmals pro Woche bis täglich mit Claude, schreibst Mails, prüfst Tabellen oder recherchierst. Die Daten kopierst du dafür noch rein und raus. Am Freitag geht es um den nächsten Schritt." },
-  super: { name: "Supercracks", level: "Level 3 · Kickflip",
+  super: { name: "Supercracks", level: "Level 3 · Kickflip", zeit: "11:10–11:35",
     text: "Du arbeitest vor allem mit Claude Code und hast Konnektoren zu euren Systemen aktiv. Claude holt sich die Daten selbst. Am Freitag tauschen wir uns auf diesem Level aus." }
 };
 
@@ -558,7 +563,10 @@ function schrittErgebnis() {
       el("p", { class: "gross", text: "Schick diese Zeile kurz an Julius, per Teams oder Mail." }),
       el("div", { class: "zeile" }, code, kopieren), status);
   }
-  abgabe.append(el("p", { text: "Die Einladung für den Termin deiner Gruppe am Freitag kommt separat." }));
+  abgabe.append(el("div", { class: "termin" },
+    el("div", { class: "kicker", text: "Dein Pflichttermin" }),
+    el("div", { class: "termin-zeit", text: `${TERMIN_TAG} · ${g.zeit} Uhr` }),
+    el("p", { text: "Julius macht aus deinem Block 10–12 Uhr gleich deinen Termin, mit Teams-Link. Den Rest des Blocks hast du wieder frei." })));
 
   const deck = el("div", { class: "deck" + (ruhig ? "" : " landen") });
   deck.innerHTML = `
