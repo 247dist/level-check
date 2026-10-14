@@ -418,7 +418,7 @@ function schrittFrage(i) {
     if (["ArrowDown", "ArrowRight"].includes(e.key)) { e.preventDefault(); waehle((n + 1) % 4); gruppe.children[zustand.antworten[f.id]].focus(); }
     if (["ArrowUp", "ArrowLeft"].includes(e.key)) { e.preventDefault(); waehle((n + 3) % 4); gruppe.children[zustand.antworten[f.id]].focus(); }
   });
-  const weiterGehen = () => { if (zustand.antworten[f.id] == null) return; if (i < FRAGEN.length - 1) schrittFrage(i + 1); else schrittAuswertung(); };
+  const weiterGehen = () => { if (zustand.antworten[f.id] == null) return; if (i < FRAGEN.length - 1) schrittFrage(i + 1); else if (SENDE_URL) schrittAbschicken(); else schrittAuswertung(); };
   weiter.addEventListener("click", weiterGehen);
   aktualisiere();
   zeige(el("div", {},
@@ -439,15 +439,20 @@ function kippen(e) {
   e.currentTarget.style.transform = `translateZ(18px) rotateY(${x * 10}deg) rotateX(${-y * 10}deg)`;
 }
 
-function schrittAuswertung() {
-  zustand.schritt = "auswertung";
+function legeGruppeFest() {
   zustand.gruppe = bestimmeGruppe(zustand.antworten);
   zustand.gewaehlt = zustand.gruppe;
+}
+
+/* Enthüllung: Rodney entschlüsselt das Level im Matrix-Stil, danach das Ergebnis. */
+function schrittAuswertung() {
+  zustand.schritt = "auswertung";
+  legeGruppeFest();
   const ziel = GRUPPEN[zustand.gruppe].name.toUpperCase();
   const anzeige = el("div", { class: "decoder", "aria-hidden": "true" });
   zeige(el("div", {},
-    el("div", { class: "kicker", text: "Auswertung läuft" }),
-    el("h2", { text: "Rodney rechnet dein Level aus …" }),
+    el("div", { class: "kicker", text: zustand.abgeschickt ? "Abgeschickt" : "Auswertung läuft" }),
+    el("h2", { text: "Rodney entschlüsselt dein Level …" }),
     anzeige
   ));
   szene.regen(1);
@@ -503,18 +508,19 @@ function zeigeStatus() {
 /* Erst abschicken, dann wird das Level enthüllt. */
 function schrittAbschicken() {
   zustand.schritt = "abschicken";
+  legeGruppeFest();
   szene.regen(0);
   const knopf = el("button", { class: "knopf gross-knopf puls", type: "button", text: "Abschicken & Level ansehen" });
   knopf.addEventListener("click", () => {
     zustand.abgeschickt = true; merke();
     if (!ruhig) { const b = document.getElementById("blitzlicht"); b.classList.remove("an"); void b.offsetWidth; b.classList.add("an"); }
-    schrittErgebnis();
     senden();
+    schrittAuswertung();
   });
   zeige(el("div", {},
-    el("div", { class: "kicker" }, el("span", { class: "punkt" }), "Auswertung fertig"),
+    el("div", { class: "kicker" }, el("span", { class: "punkt" }), `${FRAGEN.length} von ${FRAGEN.length} beantwortet`),
     el("h1", {}, "Dein Level ", el("span", { class: "gruen", text: "steht fest." })),
-    el("p", { class: "gross", text: "Ein Klick: Dein Ergebnis geht an Julius, und du siehst sofort, in welche Gruppe du gehörst." }),
+    el("p", { class: "gross", text: "Ein Klick: Dein Ergebnis geht an Julius, und Rodney enthüllt dir, in welche Gruppe du gehörst." }),
     el("div", { class: "knopfreihe" }, knopf)
   ), knopf);
   merke();
