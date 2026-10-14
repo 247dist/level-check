@@ -181,7 +181,7 @@ p.gross { font-size: 18px; color: var(--text); }
 .achse::before { content: ""; position: absolute; left: 14px; right: 14px; top: 5px; height: 3px; background: #dfe7e2; border-radius: 2px; }
 .achse i { width: 20px; height: 14px; border-radius: 6px; background: #e3ebe6; box-shadow: 0 0 6px rgba(255,255,255,.4); position: relative; }
 .achse.oben { top: 72px; } .achse.unten { bottom: 72px; }
-.seite.hinten { transform: rotateY(180deg); background: radial-gradient(circle at 30% 20%, #1c201f, #0b0d0c); border: 3px solid #1f2a25; display: grid; place-items: center; }
+.seite.hinten { transform: rotateY(180deg); background: radial-gradient(circle at 30% 20%, #1c201f, #0b0d0c); border: 3px solid rgba(43,212,125,.8); box-shadow: 0 0 24px rgba(43,212,125,.4), inset 0 0 18px rgba(43,212,125,.15); display: grid; place-items: center; }
 .seite.hinten svg { width: 40px; height: 40px; opacity: .9; }
 
 .level { font-family: var(--f-mono); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--bernstein); }
@@ -304,6 +304,7 @@ function bestimmeGruppe(a) {
 /* ---------- Zustand ---------- */
 const zustand = { schritt: "start", frage: 0, name: "", email: "", vorbelegt: false, antworten: {}, gruppe: null, gewaehlt: null };
 const MAIL_OK = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
+const MERKER = "claude-level-check-v1";
 
 function ausLink() {
   try {
@@ -318,6 +319,13 @@ function ausLink() {
   return null;
 }
 (() => {
+  // Testlink: "#neu" oder "#p-….neu" vergisst das gemerkte Ergebnis auf diesem Gerät und startet von vorn.
+  if (/(^#|\.)neu$/.test(location.hash)) {
+    try { localStorage.removeItem(MERKER); } catch (_) { /* egal */ }
+    history.replaceState(null, "", location.pathname + location.search + location.hash.replace(/\.?neu$/, "").replace(/^#$/, ""));
+  }
+  // Neuer Link im selben Tab (nur der Teil nach # ändert sich): neu laden, damit Vorbelegung und Neustart greifen.
+  addEventListener("hashchange", () => location.reload());
   const p = ausLink();
   if (!p) return;
   zustand.name = p.n; zustand.email = p.e; zustand.vorbelegt = true;
@@ -580,7 +588,6 @@ function schrittErgebnis() {
 }
 
 /* Ergebnis im Browser merken: wer den Link später wieder öffnet, landet direkt beim Ergebnis. */
-const MERKER = "claude-level-check-v1";
 function merke() {
   try { localStorage.setItem(MERKER, JSON.stringify({ name: zustand.name, email: zustand.email, antworten: zustand.antworten, gruppe: zustand.gruppe, gewaehlt: zustand.gewaehlt, abgeschickt: !!zustand.abgeschickt, uebermittelt: !!zustand.uebermittelt })); } catch (_) { /* ohne Speicher geht es auch */ }
 }
