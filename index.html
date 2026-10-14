@@ -307,7 +307,7 @@ function bestimmeGruppe(a) {
 }
 
 /* ---------- Zustand ---------- */
-const zustand = { schritt: "start", frage: 0, name: "", email: "", vorbelegt: false, antworten: {}, gruppe: null, gewaehlt: null };
+const zustand = { schritt: "start", frage: 0, name: "", email: "", vorbelegt: false, nachholen: false, antworten: {}, gruppe: null, gewaehlt: null };
 const MAIL_OK = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
 const MERKER = "claude-level-check-v1";
 
@@ -318,8 +318,8 @@ function ausLink() {
     let b = h.slice(2).replace(/-/g, "+").replace(/_/g, "/");
     while (b.length % 4) b += "=";
     const bytes = Uint8Array.from(atob(b), (ch) => ch.charCodeAt(0));
-    const [n, e] = new TextDecoder().decode(bytes).split("|");
-    if (n && n.trim().length >= 2 && MAIL_OK.test(e || "")) return { n: n.trim(), e: e.trim() };
+    const [n, e, f] = new TextDecoder().decode(bytes).split("|");  // f = "n": am Freitag nicht da, bekommt einen Nachholtermin
+    if (n && n.trim().length >= 2 && MAIL_OK.test(e || "")) return { n: n.trim(), e: e.trim(), nachholen: f === "n" };
   } catch (_) { /* kaputter Link: einfach leer starten */ }
   return null;
 }
@@ -333,7 +333,7 @@ function ausLink() {
   addEventListener("hashchange", () => location.reload());
   const p = ausLink();
   if (!p) return;
-  zustand.name = p.n; zustand.email = p.e; zustand.vorbelegt = true;
+  zustand.name = p.n; zustand.email = p.e; zustand.vorbelegt = true; zustand.nachholen = p.nachholen;
   const hallo = document.getElementById("hallo");
   hallo.textContent = `Hi ${p.n.split(" ")[0]}!`;
   hallo.hidden = false;
@@ -563,10 +563,15 @@ function schrittErgebnis() {
       el("p", { class: "gross", text: "Schick diese Zeile kurz an Julius, per Teams oder Mail." }),
       el("div", { class: "zeile" }, code, kopieren), status);
   }
-  abgabe.append(el("div", { class: "termin" },
-    el("div", { class: "kicker", text: "Dein Pflichttermin" }),
-    el("div", { class: "termin-zeit", text: `${TERMIN_TAG} · ${g.zeit} Uhr` }),
-    el("p", { text: "Julius macht aus deinem Block 10–12 Uhr gleich deinen Termin, mit Teams-Link. Den Rest des Blocks hast du wieder frei." })));
+  abgabe.append(zustand.nachholen
+    ? el("div", { class: "termin" },
+        el("div", { class: "kicker", text: "Dein Termin" }),
+        el("div", { class: "termin-zeit", text: "Nachholtermin folgt" }),
+        el("p", { text: "Am Freitag bist du nicht da. Julius schickt dir einen Nachholtermin für deine Gruppe." }))
+    : el("div", { class: "termin" },
+        el("div", { class: "kicker", text: "Dein Pflichttermin" }),
+        el("div", { class: "termin-zeit", text: `${TERMIN_TAG} · ${g.zeit} Uhr` }),
+        el("p", { text: "Julius macht aus deinem Block 10–12 Uhr gleich deinen Termin, mit Teams-Link. Den Rest des Blocks hast du wieder frei." })));
 
   const deck = el("div", { class: "deck" + (ruhig ? "" : " landen") });
   deck.innerHTML = `
@@ -597,7 +602,7 @@ function schrittErgebnis() {
 
 /* Ergebnis im Browser merken: wer den Link später wieder öffnet, landet direkt beim Ergebnis. */
 function merke() {
-  try { localStorage.setItem(MERKER, JSON.stringify({ name: zustand.name, email: zustand.email, antworten: zustand.antworten, gruppe: zustand.gruppe, gewaehlt: zustand.gewaehlt, abgeschickt: !!zustand.abgeschickt, uebermittelt: !!zustand.uebermittelt })); } catch (_) { /* ohne Speicher geht es auch */ }
+  try { localStorage.setItem(MERKER, JSON.stringify({ name: zustand.name, email: zustand.email, antworten: zustand.antworten, gruppe: zustand.gruppe, gewaehlt: zustand.gewaehlt, abgeschickt: !!zustand.abgeschickt, uebermittelt: !!zustand.uebermittelt, nachholen: !!zustand.nachholen })); } catch (_) { /* ohne Speicher geht es auch */ }
 }
 function gemerkt() {
   try {
