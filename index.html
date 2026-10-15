@@ -301,7 +301,8 @@ const FRAGEN = [
 /* ---------- Auswertung ---------- */
 function bestimmeGruppe(a) {
   const supi = (a.wo === 3) + (a.daten === 3) + (a.konnektoren >= 2) + (a.zuletzt === 3);
-  if (a.oft >= 2 && supi >= 2) return "super";
+  // Supercracks arbeiten vor allem mit Claude Code (Julius' Definition); Chat mit Konnektoren reicht nicht.
+  if (a.oft >= 2 && a.wo === 3 && supi >= 2) return "super";
   if (a.oft <= 1) return "einsteiger";
   return "medium";
 }
